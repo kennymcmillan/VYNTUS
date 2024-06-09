@@ -1,15 +1,7 @@
-<<<<<<< HEAD
 matplotlib==3.9.0
 numpy==1.26.4
 pandas==2.2.2
 pyperclip==1.8.2
 scipy==1.13.1
 streamlit==1.33.0
-=======
-matplotlib==3.9.0
-numpy==1.26.4
-pandas==2.2.2
-pyperclip==1.8.2
-scipy==1.13.1
-streamlit==1.33.0
->>>>>>> 667d3c20fd083fab78f59182fc9f0dea49b2e917
+
