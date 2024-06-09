@@ -48,6 +48,24 @@ def transform_dataset(df):
 
     return df
 
+# Function to calculate 5-second average for downloading
+def calculate_5s_average_for_download(df):
+    # Get the list of columns to average, including the original, 30s average, and Butterworth filtered metrics
+    original_metrics = ['HR', 'VE', 'VO2', 'VCO2', 'RER', 'VO2_kg', 'PETO2', 'PETCO2']
+    metrics_to_average = original_metrics + [f'{metric}_30s_avg' for metric in original_metrics] + [f'{metric}_butter' for metric in original_metrics]
+
+    # Ensure we only average columns that exist in the dataframe
+    metrics_to_average = [metric for metric in metrics_to_average if metric in df.columns]
+
+    df_5s_avg = df.copy()
+    df_5s_avg['Time_bin'] = (df_5s_avg['Time_sec'] // 5) * 5
+
+    agg_dict = {col: 'mean' for col in metrics_to_average}
+    df_5s_avg = df_5s_avg.groupby('Time_bin').agg(agg_dict).reset_index()
+    df_5s_avg.rename(columns={'Time_bin': 'Time_sec'}, inplace=True)
+
+    return df_5s_avg
+
 # Function to plot the filtered data
 def plot_filtered_data(df, metric):
     fig, ax = plt.subplots()
@@ -65,10 +83,10 @@ def plot_filtered_data(df, metric):
 def calculate_5s_average(df):
     columns_to_average = ['HR', 'VE', 'VO2', 'VCO2', 'RER', 'VO2_kg', 'PETO2', 'PETCO2']
     df_5s_avg = df.copy()
-    
+
     for column in columns_to_average:
         df_5s_avg[column] = df[column].rolling(window=5, min_periods=1).mean()
-        
+
     return df_5s_avg
 
 st.set_page_config(layout="wide")  # Set the layout to wide
@@ -82,7 +100,7 @@ st.markdown(
             padding-top: 0rem;
             margin-top: 0rem;
         }
-        
+
         .appview-container .main .block-container {
             padding-top: 1rem;
             padding-bottom: 1rem;
@@ -121,7 +139,7 @@ with st.sidebar:
         # Read the uploaded CSV file
         df = pd.read_csv(uploaded_file)
 
-        # Transform the dataset (Assuming transform_dataset is defined elsewhere)
+        # Transform the dataset
         transformed_df = transform_dataset(df)
 
         # Add Name and Test Date columns
@@ -131,14 +149,21 @@ with st.sidebar:
         # Store transformed data in session state
         st.session_state.transformed_df = transformed_df
 
+        # Calculate 5-second averages for download
+        download_df = calculate_5s_average_for_download(transformed_df)
+
+        # Add Name and Test Date columns to download data
+        download_df.insert(0, 'Name', name)
+        download_df.insert(1, 'TestDate', test_date)
+
         # Format the file name using Name and Test Date
         formatted_date = test_date.strftime("%Y-%m-%d")
-        file_name = f"{name}_{formatted_date}_transformed.csv"
+        file_name = f"{name}_{formatted_date}_5s_averaged.csv"
 
         # Download the transformed dataset
         st.download_button(
             label="Download Transformed CSV",
-            data=transformed_df.to_csv(index=False).encode('utf-8'),
+            data=download_df.to_csv(index=False).encode('utf-8'),
             file_name=file_name,
             mime='text/csv'
         )
